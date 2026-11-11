@@ -1,0 +1,101 @@
+# Profile manifest — handout-verify (ADR-0049 element 2; EV-12)
+# Enumerates every instruction surface supplied to the session and every environment-performed
+# step. The session under test IS the handout fact-check verifier, the fresh-context peer the care
+# session spawns before a seal (ADR-0034): it reads a finished handout and writes the sidecar.
+name: handout-verify
+description: >
+  The handout fact-check verifier on one synthetic person: the brief and one filled input block in
+  file mode; the session reads its standing prompt, the handout, the profile, the medications list,
+  the declared text layer and the scanned original behind it, and writes the `.factcheck.md` sidecar.
+instruction_surfaces:
+  - path: CLAUDE.md
+    role: >
+      operating contract (keystone), supplied verbatim from the repository under test; the CLI
+      loads it from the fixture root, as it loads it for a verifier subagent in a care session
+  - path: evals/profiles/handout-verify-note.md
+    role: >
+      this profile's operational note — the eval-mode addendum's counterpart, and the ONLY
+      sanctioned deviation surface here; its template bytes are hashed, and the harness fills its
+      three slots per trial with the SHA-256 of the built handout, profile and medications list
+      (the verifier's hash rule needs a shell command the file-tools-only policy denies).
+      Delivered the way the addendum is.
+  - path: _templates/handout-factcheck-verifier.md
+    role: >
+      the brief, copied verbatim from the template's brief block (the lines above its input block),
+      followed by one `TABULARIUM VERIFY INPUT v1` block (MODE files) — together they are the task
+    reviewed_against: 55439354d2a320fc316c1080424e8e41b5f3af290c3f1c2170e79009fcc53363
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # Re-reviewed 2026-11-07: the PASS and repair bullets below the input block name the record
+    # binding and the masked page; the delivered brief block is unchanged.
+    # Re-reviewed 2026-11-01: one pointer below the input block now names ADR-0034 point 10; the
+    # delivered brief block is unchanged.
+    # Re-reviewed 2026-10-28: the delivered brief block is byte-identical to the 2026-10-11 review;
+    # the changes below the input block (later rounds, the outranked value, the bundle steps once)
+    # are the author's repair steps, not the session's task.
+    # sha256 as split 2026-10-11 (documentation only, as for the other profiles' reviewed_against —
+    # enforcement is ADR-0049, *Shelved machinery* item 3).
+fixture_instruction_surfaces:
+  # Copied verbatim at fixture build from the working tree (fixture.VERIFIER_PROMPT_REL); the brief
+  # names it and the session reads it, as a verifier in a care session does.
+  - path: _templates/handout-verifier-prompt.md
+    role: the standing prompt — scope, method, ledger, severity, fix classes, sidecar and verdict rule
+    reviewed_against: c935d76508ed6d2d353abb3f88ee9300a180f8ac8c23842caab9bcab0481445a
+    # Re-reviewed 2026-11-09 (ADR-0075): for a marked person the verifier runs the identity status
+    # command and opens no page image when details are kept; EV-12's person is not in private mode,
+    # so no row changes.
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # Re-reviewed 2026-11-08: before the first original or page image the verifier compares the
+    # on-disk profile with the digest it recorded (a stale bundle stops it); EV-12's note supplies
+    # that digest, so no row changes.
+    # Re-reviewed 2026-11-07: a private-mode person's filed masked page stands in for the original
+    # (v2 excepted; EV-12's person is not in private mode, so no row changes), and the sidecar gains
+    # two record-hash lines; the note now hands over those digests too, since the session has no
+    # shell.
+    # Re-reviewed 2026-11-07: a handout's cited product information joins the permitted material,
+    # with its own paragraph and one clause in Severity. EV-12's handout cites none and its session
+    # has no web tool, so no EV-12 row changes; no shell step added.
+    # Re-reviewed 2026-10-28: later rounds read their own earlier sidecar (EV-12 plants none), a
+    # recorded omission is not a finding, the ledger row format, conflicting sources (a report
+    # beside the original, an inference corrected), a carried row keeps its status — no shell step.
+    # Moved out of the verifier template 2026-10-11, its text unchanged but for the sentence that
+    # says where the input block sits. Earlier reviews of that text: 2026-10-02 (the Originals rule,
+    # the higher-grade rule, the fix classes) and 2026-10-05 (patient handouts carry no evidence
+    # marks or bracketed confirm tags, `unvetted` reworded) — no shell step added, so the note below
+    # still delegates only the handout hash.
+environment_performed_steps:       # exhaustive — the note delegates NOTHING beyond this list.
+                                   # LIST ORDER IS EXECUTION ORDER; closing-guard-check is always last.
+  - id: ownership-ledger-append
+    phase: build                               # the scan pair is inventoried before any guard runs;
+                                               # nothing the session is asked to do touches the ledger
+    implementation: tools/person_ownership (migrate, append confirm)
+    completion_proof: verifier green over the fixture MANIFEST, recorded
+    may_mutate_fixture: true
+    fail_closed: true
+  - id: guard-preflight
+    phase: pre-session
+    implementation: checks/check.sh
+    completion_proof: green summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true
+  - id: handout-hash
+    phase: pre-session
+    implementation: harness (fixture.verify_note) — SHA-256 of the built handout's, profile's and
+                    medications list's bytes
+    completion_proof: the digests in the per-trial note, delivered with the session
+    may_mutate_fixture: false
+    fail_closed: true
+  - id: pre-edit-snapshot
+    phase: pre-session
+    implementation: harness pre-session copy (run_eval copies the tree to <run root>/pre/)
+    completion_proof: copy under pre/, used as the grader's before-tree
+    may_mutate_fixture: false
+    fail_closed: true
+  - id: closing-guard-check
+    phase: post-session                        # ALWAYS LAST
+    implementation: checks/check.sh
+    completion_proof: summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true                          # a red closing check invalidates the trial (recorded invalid, never pass)
+tool_policy: file-tools-only-v1    # Read/Write/Edit/Grep/Glob; no shell; Read MUST be vision-capable —
+                                   # the case turns on opening the scanned original.
+used_by: [EV-12]

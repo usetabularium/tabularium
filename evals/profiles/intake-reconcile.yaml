@@ -1,0 +1,228 @@
+# Profile manifest — intake-reconcile (ADR-0049 element 2)
+# Enumerates every instruction surface supplied to the session and every environment-performed
+# step. Instruction-surface hashes are computed at run time (surfaces legitimately change between
+# runs). Binding step implementations through an evaluator manifest with transitive bundles is
+# shelved (ADR-0049, *Shelved machinery* item 2).
+name: intake-reconcile
+description: >
+  Source intake and reconciliation for one synthetic person: a new source arrives, the intake
+  checklist governs, medications/profile are reconciled against it.
+instruction_surfaces:
+  - path: CLAUDE.md
+    role: operating contract (keystone), supplied verbatim from the repository under test
+  - path: evals/profiles/eval-mode-addendum.md
+    role: >
+      eval-mode addendum — the ONLY sanctioned deviation surface; its exact bytes are normative
+      (ADR-0049 element 3), phrased as a neutral operational note to avoid adding an explicit
+      evaluation cue through the addendum itself
+fixture_instruction_surfaces:
+  - path: _templates/person/med/sources/README.md
+    role: >
+      intake checklist, copied verbatim at fixture build to the one place a care tree keeps it after
+      the care migration (no per-person copy since the one-page contract, 2026-10-05)
+    reviewed_against: ac282ae98c1788bef5a759edbf20606f9ad0c7de530a8172b16d9be9f0ddecd5
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # re-reviewed 2026-11-02: step 2 says a transcription's shape comes from this procedure and its
+    # front-matter example, never from another person's files — a session step; intake fixtures ship
+    # their transcription built with the image, so the delegation below is unchanged.
+    # re-reviewed 2026-11-01: pages of one document saved as separate files are each filed unchanged
+    # with their own transcription, never merged — a session step; no fixture has one, so the
+    # delegation below is unchanged.
+    # re-reviewed 2026-11-01: pointer words only (ADR-0023 points 1–3) — no step changes.
+    # sha256 of _templates/person/med/sources/README.md as re-reviewed 2026-10-28: step 3 (the
+    # delegated ownership-ledger append) is a short cue, the delegated operation unchanged; step 4
+    # points to CLAUDE.md → Keeping the record honest; the folder-link bullet and the quotation
+    # detail are cut — session steps, so the delegation below is unchanged. Re-reviewed 2026-10-26: a document whose
+    # owner is in doubt waits unfiled (asked in chat); transcriptions write other people by role; the
+    # sections on several arrivals, late transcriptions and large originals moved to topic pages
+    # (`topics/batches.md`, `topics/other-originals.md`, which fixtures do not ship: no intake fixture
+    # has a batch, a late transcription or a non-page original) — session steps, so the delegation
+    # below is unchanged. Re-reviewed 2026-10-25: the arrival block
+    # (a file dragged into the chat, copied from its own path; a pasted image; pasted text; a link to
+    # any folder the operator is asked to use) — session steps; no intake fixture has an arrival, so
+    # the delegation below is unchanged. Re-reviewed 2026-10-05: the shared copy
+    # (paths say "the person's med/..."), the template anchors gone, dated confirm tags in step 2,
+    # transcriptions withhold access codes and contact details, and a new section — several arrivals
+    # in one append call, `append transcribe` for a late transcription, the large-original viewer.
+    # All session steps; none arises in an intake fixture (its image and transcription are inventoried
+    # together at build, by the one delegated append), so the delegation below is unchanged.
+    # Re-reviewed 2026-10-02 (step 4: an original
+    # that is the authoritative record of a fact and disagrees with a report or inference about that
+    # same fact at that time corrects it, the other value kept
+    # in the change log as superseded and the operator asked — since 2026-10-28 the step points to
+    # CLAUDE.md, where a conflicting report stays beside it and an inference is corrected; prescribed versus taken and an older
+    # document versus a later change stay two facts — reconciliation, a session step; and new block
+    # src-retranscribe: correcting a filed transcription — edit, erratum line, `append retranscribe` —
+    # a session step taken only on finding a misread; so the delegation below is unchanged).
+    # Re-reviewed 2026-09-29 (step 0 reads the
+    # profile first, step 5 names the source file, step 6 offers a handout, never produces one
+    # unasked — session steps, none environment-performed, so the delegation below is unchanged).
+    # Re-reviewed 2026-09-29 (step 3 now sends a person with no ledger to `init <handle>` and defers
+    # to the tool's refusal for a MANIFEST with no checkpoint; every fixture has its ledger before
+    # the session, so its path stays the append writer — a session step, so the delegation below is
+    # unchanged). Re-reviewed 2026-09-28 (step 4: open the original before a value crosses over — a
+    # session step, not an environment-performed one). Previously re-reviewed 2026-09-19
+    # (PR #15: arrival block, distilled steps 1-3). First reviewed 2026-08-30. Enforcement is
+    # shelved (ADR-0049, *Shelved machinery* item 3); when built it must FAIL CLOSED when the live
+    # template hash differs, until this manifest is re-reviewed — a checklist edit must never
+    # silently extend the delegation below.
+  # EV-15 (asking for a document, since 2026-10-25) ships three more, verbatim from the tree under
+  # test; hashed with the checklist into this profile's stack (run_eval.ARRIVAL_PATHS). The
+  # reviewed_against values are documentation only (evals/README.md → Profiles).
+  - path: _templates/person/med/_inbox/README.md
+    role: the intake tray's procedure — between sessions and in batches, and the only way in in private mode
+    reviewed_against: 76edaeb5add84df177245a61b9f0c1440fcd5c41250674a843097d06f4100128
+    # re-reviewed 2026-11-10 (v0.66.1 read-through, merged with #364): a dated history clause became
+    # "no longer applies" — wording only; nothing new delegated.
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # re-reviewed 2026-11-01: intake renames and moves each file, never merging pages — a session
+    # step; nothing new is delegated.
+    # re-reviewed 2026-11-01: wording only — no step changes.
+  - path: _templates/INTAKE.md
+    role: the add-a-person procedure (who a document belongs to); shipped for a real tree's shape
+    reviewed_against: f43d9097eeda133b0d2e44b51580353d3b0e73992b1e9d333eac1305779bc4e9
+    # re-reviewed 2026-11-11 (per-number pages): step 4 reads the page of each listed key the tag names
+    # and does its setup; the date-of-birth prefix steps moved to that number's page — a session step
+    # EV-15 trees never reach; nothing new is delegated.
+    # re-reviewed 2026-11-11: private mode is never offered at intake; step 1 offers an alias and
+    # step 3 runs only when the operator has asked for it, and documents wait only for those people —
+    # session steps before any EV-15 tree starts (its person exists, marked or not); nothing new is
+    # delegated.
+    # re-reviewed 2026-11-09 (intake walk): step 4, only for a number with a date-of-birth prefix, runs
+    # a tool that shows the private-mode identifier file in Finder before the operator edits it — a session step EV-15 trees never reach; nothing new
+    # is delegated.
+    # re-reviewed 2026-11-09 (intake walk): step 3 asks about documents only after everyone's
+    # private-mode choice and never offers a private-mode person a drag — session steps; EV-15b's trees already
+    # route that person's pages through the intake tray, so nothing new is delegated.
+    # Re-reviewed 2026-11-09 (cold review): step 1 writes the handle, not a placeholder, until the
+    # form is taken in — a session step EV-15 trees never reach; nothing new delegated.
+    # Re-reviewed 2026-11-09 (ADR-0075): step 3 asks which other details to keep, by the kept-details
+    # topic, instead of a second level — an offer in words; the setup steps need a shell and arise in
+    # no intake tree, so nothing new is delegated.
+    # Re-reviewed 2026-11-08: the family-history question names angina as chest pain from the heart,
+    # and the close ends on an open question — wording; nothing new is delegated.
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # re-reviewed 2026-11-08: section 0 (first run on a new Mac) moved to SETUP.md, leaving a
+    # pointer; section 1's private-mode step points there for the setup lines. Sections 1 onward,
+    # which the EV-15 trees reach, are unchanged — nothing new is delegated.
+    # re-reviewed 2026-11-07 (pull request 332): step 3 runs the read-only private-mode tools check;
+    # step 4 tests whether the identifier file's pointer exists and, on a care-only install, has
+    # nothing to add (ADR-0068) — session steps; nothing new is delegated.
+    # re-reviewed 2026-11-07: step 3 asks the country of the person's number as its tag (ADR-0062) —
+    # a session step; nothing new is delegated.
+    # re-reviewed 2026-10-31: private mode v2 offered again (alias before the folder exists, setup
+    # pointer) and the family-history question's wording — session steps.
+    # re-reviewed 2026-10-28: roster relatives and the family-history helper, the family-history
+    # question's wording, the close listing what was filed — session steps.
+  - path: tools/private-mode/README.md
+    role: >
+      the private-mode rules, which the contract sends a session to before any page of a marked
+      person — in EV-15b's tree only (chat attachments refused; the intake tray the only way in).
+      Its tooling steps (redaction, the operator's gate) need a shell and arise in no EV-15 tree, so
+      nothing new is delegated below.
+    reviewed_against: 854635f7a1a4cd11c64836c30df187385a786c2360abf036204effe9becb157f
+    # re-reviewed 2026-11-11 (US number row): *Which number* says an untagged line's pages wait until
+    # the operator gets the line with the tag naming the number — a session step; nothing new is delegated.
+    # re-reviewed 2026-11-11 (per-number pages): *Which number* routes to one page per listed key
+    # (tools/private-mode/numbers/), read before masking or filing; the no-date pointer moved with the
+    # number that needs it — a pointer; nothing new is delegated.
+    # re-reviewed 2026-11-11: the status line says opt-in only, never offered by a session — wording;
+    # nothing new is delegated.
+    # re-reviewed 2026-11-10 (ADR-0077): *Which number* — a number not on the list is the tag's key
+    # `unlisted`, no tag searches every row, and the session checks the line for a damaged tag and asks
+    # the operator; a session step, nothing new is delegated.
+    # re-reviewed 2026-11-09 (ADR-0076): *Which number* — a number not on the list is covered by hand,
+    # with any printed code that may hold it, before scanning instead of the pages waiting; tooling steps no EV-15 tree reaches; nothing new is
+    # delegated.
+    # re-reviewed 2026-11-09 (ADR-0074): *Which number* points to the kept-details topic for a number
+    # with no date inside, read from a page — a pointer; nothing new is delegated.
+    # re-reviewed 2026-11-09 (cold review): the sign of kept details is the tool-written
+    # ⟨withheld:details-kept⟩ on the private-mode line; EV-15b's person has none, so nothing changes.
+    # re-reviewed 2026-11-09 (ADR-0075): one private mode — placeholders in the profile or medication
+    # list are the sign of kept details, read by the kept-details topic; EV-15b's person has none, so
+    # no session step changes and nothing new is delegated.
+    # re-reviewed 2026-11-08 (merging main again): the topic list points to the setup topic — a
+    # pointer; nothing new is delegated.
+    # re-reviewed 2026-11-08 (merging main into ADR-0073's branch): the changes below read together;
+    # none delegates anything new.
+    # re-reviewed 2026-11-08 (pull request 348): *What it does not protect* gains the private-mode
+    # limits moved from the top-level README — warnings, no session step; nothing new is delegated.
+    # re-reviewed 2026-11-08 (cold review): *Which number* — beside a tag, "not on the list" keeps the
+    # tagged search and the pages wait; nothing new is delegated.
+    # re-reviewed 2026-11-08 (only the US row ships): the French paragraph under *Before you scan* left
+    # with the French row; nothing new is delegated.
+    # re-reviewed 2026-11-08 (merging main into ADR-0073's branch): the two changes below read
+    # together; neither delegates anything new.
+    # re-reviewed 2026-11-08 (pull request 332, merging main): ADR-0069's paragraph on a masked page
+    # filed under med/sources/_redacted/ — a verifier rule outside EV-15's trees; nothing new is delegated.
+    # re-reviewed 2026-11-07 (ADR-0073): *Which number* says how a mistyped or misplaced tag and
+    # "number not on the list" are read — session and guard behaviour; nothing new is delegated.
+    # re-reviewed 2026-11-07 (pull request 332): an attachment is relayed only on an install with a
+    # development side, and *What it does not protect* names the darkened read — session steps and
+    # wording; nothing new is delegated.
+    # re-reviewed 2026-11-07: *Which number* adds the per-person number tag (ADR-0062) — operator and
+    # session steps; nothing new is delegated.
+    # re-reviewed 2026-11-01: *What it does not protect* cut to its warnings (the rest cited by
+    # accepted-risk ID) and a stale guard-output claim dropped — wording only; nothing new is delegated.
+    # re-reviewed 2026-10-31: the v2 freeze lines cut, record separation over masking,
+    # covering details before a scan — session and operator steps; nothing new is delegated.
+    # re-reviewed 2026-10-28: the chat-attachment wording — a session step.
+  # EV-10d (since 2026-10-31) builds its medications list from this template, legend included; hashed
+  # with the others above into this profile's stack (run_eval.ARRIVAL_PATHS).
+  - path: _templates/medications.md
+    role: >
+      the medications template — the dose rows' layout and their legend (one row per dose, prescribed or
+      taken; a dose change ends its row and adds one), which EV-10d's list carries. A session step only:
+      nothing new is delegated below.
+    reviewed_against: 27d175fdb445349ae078ef87de9309076ca2001485f0768e7a1a148bd8df4cb4
+environment_performed_steps:       # exhaustive — the addendum delegates NOTHING beyond this list.
+                                   # LIST ORDER IS EXECUTION ORDER; the ownership append PRECEDES the
+                                   # preflight (L13 fails closed on an un-inventoried source, so the
+                                   # fixture's new image/OCR pair must be in the MANIFEST before any
+                                   # guard runs), and closing-guard-check is always the FINAL step.
+                                   # A harness-landing bite must prove a wrong order reds.
+  - id: ownership-ledger-append
+    phase: build                               # during fixture materialization, before any guard runs;
+                                               # safe here because the session may never edit sources
+                                               # (the pair's bytes are fixed from build onward)
+    implementation: tools/person_ownership (append)
+    completion_proof: verifier green over the fixture MANIFEST, recorded
+    may_mutate_fixture: true                   # appends to the fixture's per-person MANIFEST (outside graded scope)
+    fail_closed: true
+  - id: guard-preflight
+    phase: pre-session
+    implementation: checks/check.sh
+    completion_proof: green summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true
+  - id: no-concurrent-writer
+    phase: pre-session
+    implementation: harness — one session per freshly built fixture tree, nothing else writes it
+    completion_proof: the run's design (one trial, one tree, one session); named in the addendum
+    may_mutate_fixture: false
+    fail_closed: true                          # added 2026-10-05: the contract's "make sure no other
+                                               # session is writing records" (full run, EV-05b-t1)
+  - id: pre-edit-snapshot
+    phase: pre-session
+    implementation: harness pre-session copy (the lean form; run_eval copies the tree to <run root>/pre/)
+    completion_proof: copy under pre/, used as the grader's before-tree
+    may_mutate_fixture: false                  # the copy is taken outside the fixture root
+    fail_closed: true
+  - id: transcription-rebind
+    phase: post-session                        # after the session, before the closing check
+    implementation: tools/person_ownership (append retranscribe)   # run_eval, for each transcription
+                                               # the ledger bound before the session whose bytes it changed
+    completion_proof: the tool's exit code per transcription, on the run record (`rebinds`)
+    may_mutate_fixture: true                   # appends to the per-person MANIFEST (outside graded scope)
+    fail_closed: true                          # the tool refuses, writing nothing, without a new erratum
+                                               # line or if the original's bytes moved: L13 stays red
+  - id: closing-guard-check
+    phase: post-session                        # ALWAYS LAST
+    implementation: checks/check.sh
+    completion_proof: summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true                          # a red closing check invalidates the trial (recorded invalid, never pass)
+tool_policy: file-tools-only-v1    # Read/Write/Edit/Grep/Glob; no shell; no agent-accessible network
+                                   # tool. Read MUST be vision-capable for image sources (see evals/README.md
+                                   # → Containment requirements, item 4) — EV-02/EV-06b variants cannot count otherwise.
+used_by: [EV-02, EV-06, EV-10, EV-13, EV-14, EV-15]

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Tabularium pre-merge-commit guard — the ADR-0022 commit gate for AUTO-COMMITTED merges. Git runs
+# `pre-merge-commit` (never `pre-commit`) when a clean `git merge` / `git merge --no-ff -m …` /
+# `-s ours` creates its commit by itself; a conflict-resolved merge finished with `git commit` already
+# goes through pre-commit. Without this hook every lane-landing merge on main bypassed check.sh
+# (found 2026-08-23, technical audit P1 #3). At this point the index holds the merged result and the
+# working tree holds it for every path the merge touched; check.sh reads the working tree.
+# Same gate, same bytes, one implementation: delegate to the installed pre-commit beside this file.
+# `git cherry-pick` / `git rebase` have NO pre-commit-class hook in git at all — they stay ungated
+# (documented in checks/README.md; run check.sh after them).
+#
+# Install into the LOCAL working repo (same pattern as pre-commit):
+#   cp checks/git-hooks/pre-merge-commit .git/hooks/pre-merge-commit && chmod +x .git/hooks/pre-merge-commit
+#
+# Portable: POSIX sh / bash 3.2 / BSD userland; PORT-linted + bite-tested in checks/selftest.sh (HOOK).
+set -u
+hook_dir="$(dirname "$0")"
+if [ ! -x "$hook_dir/pre-commit" ]; then
+  echo "pre-merge-commit BLOCKED: $hook_dir/pre-commit is missing or not executable — install it (checks/README.md → Commit gate)." >&2
+  exit 1
+fi
+exec "$hook_dir/pre-commit"

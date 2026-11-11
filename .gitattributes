@@ -1,0 +1,3 @@
+# Every checkout writes LF, whatever core.autocrlf says: bash dies on a CRLF `set -uo pipefail`, and the
+# scripts read tracked lists (RECORD-SET, HOLDOUT) line by line. Binaries are detected and left alone.
+* text=auto eol=lf

@@ -1,0 +1,72 @@
+# Linux validation for the record-free DEV repository and published skeleton (ADR-0031/0050).
+# The `on` block owns event selection; job steps below own the suites and their prerequisite notes.
+# Fixtures are synthetic: a runner must never receive care records or the real token registry.
+name: skeleton-check
+# TRIGGERS + CONCURRENCY — PULL-REQUEST INTAKE (2026-09-07). `pull_request` was already a trigger,
+# but so was an unfiltered `push:`, so every push to a branch with a PR open ran this workflow
+# TWICE — once for the branch head, once for the merge ref — and paid twice for the same answer.
+# Scoping `push` to `main` and to release tags makes the PULL REQUEST the intake path for
+# everything else: a working branch is checked when it asks to merge, `main` is re-checked after
+# it lands (so the branch CARE pulls from stays continuously attested), and a release tag is
+# checked as the artifact CARE actually adopts (ADR-0050). A push to a working branch no longer
+# runs on its own — open the PR, which is the point.
+#
+# WHAT THIS FILE CANNOT DO, AND IS NOT WAITING TO. Only half the boundary lives here. The other half
+# — requiring a pull request, and requiring the `guards` check to pass before merge — is a REMOTE
+# setting on the repository, and the operator **considered and declined it on 2026-09-07**. So this
+# workflow REPORTS rather than BLOCKS by decision, not by omission: a red PR can still be merged by
+# hand, and the rule that work lands on a branch through a pull request holds because it is written
+# in `CONTRIBUTING.md` → *How a change lands*, which is where a session reads it. Do not re-derive
+# the server-side proposal (it is closed).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# Superseded PR runs are cancelled — the last push to a branch is the one whose answer matters.
+# A run on `main` or on a tag is NEVER cancelled: that green is the attestation of record.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least privilege, stated rather than inherited. Nothing here writes to the repository, and this
+# workflow holds NO secret — in particular no token registry: ADR-0050 A2 puts that outside every
+# repository, and a cloud CI secret store is not an exception to "outside every repository". A
+# future step that needs write access has to come here and ask for it.
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ADR-0050: CI runs as a record-free DEV instance — a runner never receives a patient tree.
+      # The marker only ASSERTS the mode L20 derives from the observable (records present or absent).
+      # Gated on the record set shipping: a skeleton exported without checks/RECORD-SET runs as a
+      # record-free tree WITHOUT a marker (L20's "nothing asserted, nothing derived" branch) rather than
+      # asserting a mode whose observable is missing (review 2026-09-06, finding 3).
+      - name: instance marker — this runner is a DEV instance (ADR-0050)
+        run: if [ -f checks/RECORD-SET ]; then echo dev > .tabularium-instance; else echo "no checks/RECORD-SET in this export — running as a record-free tree without a marker"; fi
+      - name: check.sh — all guards green (zero-patient tree)
+        run: bash checks/check.sh
+      # --export adds the export gate's full matrix (about a hundred synthetic exports, about a minute): the gate is the
+      # last scan before anything goes public, and this is its only Linux run. Synthetic registries only —
+      # the fixtures write their own — so the matrix needs nothing the exported skeleton lacks.
+      # EXPECTED SELF-SKIPS — the `--expect-skips` list on the run line below is the one home of
+      # CI's set. Every case the suite cannot run prints `SKIP  [<id>] (LOUD)`, a self-skip of the live board
+      # included, and any id outside the set fails this step, so a green run here means every other guard and
+      # bite ran. `renderer`: this runner has no render environment (`.venv-render` is never shipped), so the
+      # renderer bites skip. A new expected skip is added here, deliberately, with its reason in this comment.
+      # PYTHON SUITES run inside selftest.sh: every tools/*/ and evals/*/ test_*.py, one process each — synthetic
+      # data only, no model call, no network — and a module that runs no test, or skips them all, fails. This file
+      # keeps no list of them: checks/PYTHON-SUITES does, and a listed suite not found, or a found one not listed,
+      # fails. A skip inside a suite is that suite's own: its SUITE line counts them, and this
+      # step's expected set does not cover them.
+      # DELIBERATELY ABSENT — `python3 -m evals.harness.controls`, `compare_controls` and `run_eval --dry-run`: they
+      # build image fixtures through the pinned render environment (`.venv-render`), which is never shipped. Do not
+      # "fix" this by adding them; shipping a render venv is a separate decision.
+      - name: selftest.sh — guards still bite, export gate matrix and Python suites included, no unexpected self-skip
+        run: bash checks/selftest.sh --export --expect-skips renderer

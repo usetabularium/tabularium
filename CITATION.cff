@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use or cite Tabularium, please cite it as below."
+title: Tabularium
+type: software
+authors:
+  - given-names: Michael
+    family-names: Trzesimiech
+license: Apache-2.0
+abstract: A domain-specific agent harness for personal health records, running on Claude Code.

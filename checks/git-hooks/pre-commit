@@ -1,0 +1,43 @@
+#!/bin/sh
+# Tabularium pre-commit guard — makes "never commit through red" STRUCTURAL, not a matter of
+# diligence (the manual verify-before-commit gate is what CAUGHT the 2026-06-13 portability incident;
+# this removes the "human forgets" path). On every commit it runs the records lint and blocks a red
+# tree. It never runs the bite suite (that runs before a pull request and in CI; step 2 below).
+#
+# Install into the LOCAL working repo (same pattern as pre-push):
+#   cp checks/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# Portable: POSIX sh / bash 3.2 / BSD userland (the operator's macOS host) — no bash-4-only builtins,
+# no GNU-only flags. Lint-enforced in checks/selftest.sh (which auto-discovers checks/git-hooks/*;
+# ADR-0020 / ADR-0021). Bite-tested in selftest.sh (HOOK cases; ADR-0022).
+#
+# Emergency override (two-factor, AUDITED): set TABULARIUM_SKIP_GUARD=1 AND name it in the commit
+# message. The env var bypasses THIS hook; the paired commit-msg hook then REQUIRES the message to
+# contain "TABULARIUM_SKIP_GUARD", so a bypass is never silent — it leaves a durable mark in history.
+# (Split across two hooks by necessity: git runs pre-commit BEFORE the commit message exists, so the
+# message half cannot be checked here — see ADR-0022 point 2.)
+set -u
+
+cd "$(git rev-parse --show-toplevel)" || { echo "pre-commit: cannot find repo root" >&2; exit 1; }
+
+if [ "${TABULARIUM_SKIP_GUARD:-}" = "1" ]; then
+  echo "pre-commit: TABULARIUM_SKIP_GUARD=1 — records lint BYPASSED. (commit-msg requires the message to name it.)" >&2
+  exit 0
+fi
+
+# 1. The records lint must be green, or the commit is blocked.
+if ! out="$(bash checks/check.sh 2>&1)"; then
+  echo "$out" >&2
+  echo "pre-commit BLOCKED: checks/check.sh is red — fix it before committing." >&2
+  echo "  (emergency only: TABULARIUM_SKIP_GUARD=1 git commit … — and name TABULARIUM_SKIP_GUARD in the message.)" >&2
+  exit 1
+fi
+echo "pre-commit: $out" >&2
+
+# 2. The bite suite is NOT run here, nor in any hook: it runs before a pull request is opened and in
+#    CI on every PR (ADR-0022 points 4 and 6). `check.sh` above protects the
+#    working tree in about a second, so every commit pays it; `selftest.sh` protects the guards
+#    themselves in minutes, and the review boundary is where that matters. The trade, stated: a commit or a push CAN
+#    carry a broken guard, and you learn before the pull request, or in CI.
+
+exit 0

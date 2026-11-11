@@ -1,0 +1,160 @@
+/* Tabularium — shared handout stylesheet.  House visual style for BOTH handout audiences.
+   Direction: Spectral (headings) + Handout Sans (body: Adobe's Source Sans 3 design, merged and
+   renamed — see the bundled-fonts note below) — unchanged. Colour is the Tabularium design
+   system's green (#3D5A48), used ONLY on thin lines/marks (h2 underline, list markers, the blockquote
+   rule, link underlines) — never as text, never as a fill.
+   PAPER-FIRST & INK-NEUTRAL: the printed PDF is WHITE with NO filled or shaded areas. All text — body,
+   headings, table cells, links — is neutral grey (R=G=B: near-black for primary text/headings, a
+   lighter neutral for meta/secondary text) — so a home printer can lay text down with black ink alone
+   (its print settings decide). Ordinary section/table hairlines are a light neutral grey; hairlines cost negligible ink
+   either way. The on-screen reading copy is a separate surface (preview.css, ADR-0058) — this file is
+   print-only and carries no screen variant.
+   Rendered via _templates/handout-assets/render_handout.py (python-markdown sane_lists+tables → weasyprint).
+   Fonts bundled locally (OFL, via Fontsource) so rendering is identical on any host, offline.
+   Governed by ADR-0032 + HANDOUT-RULES.md.  Change log at the bottom. */
+
+/* ============================ colour tokens ============================ */
+:root{
+  --ink:#1F1F1F;          /* body text + headings — neutral near-black (R=G=B; no cast on paper) */
+  --ink-soft:#555555;     /* meta lines, captions, footnotes — neutral dark grey, >=7:1 vs. white */
+  --head:#1F1F1F;         /* headings + the table-header rule — same neutral ink as body text */
+  --accent:#3D5A48;       /* Tabularium green — THIN LINES + small marks ONLY: h2 underline, list
+                             markers, blockquote rule, link underline. Never text, never a fill. */
+  --rule:#BFBFBF;         /* neutral hairline — ordinary section + table row lines; stays visible
+                             when printed */
+}
+
+/* ============================ bundled fonts ============================ */
+/* One COMPLETE file per weight: the Fontsource `latin` + `latin-ext` subsets merged (fontTools) into a
+   single cmap, so the whole set — incl. the Central European diacritics and broad European
+   Latin — resolves from one file. A split across two subset files behind `unicode-range` is NOT
+   reliable in weasyprint (it renders the extended letters as tofu — the ADR-0032 red-team M2 finding).
+   woff2 first, woff fallback for older renderers. Handouts use upright type throughout.
+   A merged file is a Modified Version under the SIL OFL 1.1, and Adobe reserves the font name
+   "Source" (condition 3), so the merged Source Sans 3 files are renamed "Handout Sans" (name table
+   and file names; Adobe's copyright notice kept). Spectral reserves no name and keeps its own. */
+@font-face{font-family:'Spectral';font-weight:600;font-style:normal;font-display:swap;
+  src:url('fonts/spectral-600.woff2') format('woff2'),url('fonts/spectral-600.woff') format('woff')}
+@font-face{font-family:'Spectral';font-weight:500;font-style:normal;font-display:swap;
+  src:url('fonts/spectral-500.woff2') format('woff2'),url('fonts/spectral-500.woff') format('woff')}
+@font-face{font-family:'Handout Sans';font-weight:400;font-style:normal;font-display:swap;
+  src:url('fonts/handout-sans-400.woff2') format('woff2'),url('fonts/handout-sans-400.woff') format('woff')}
+@font-face{font-family:'Handout Sans';font-weight:600;font-style:normal;font-display:swap;
+  src:url('fonts/handout-sans-600.woff2') format('woff2'),url('fonts/handout-sans-600.woff') format('woff')}
+
+/* ============================ page (print) ============================ */
+@page{
+  size:A4;
+  margin:18mm 18mm 16mm;
+  /* Footer (page number + id + prep-date + Tabularium attribution) is injected per-document by
+     render_handout.py, so it carries the handout's own id / date / language; so is a draft's
+     top-margin draft line. Build-QA B5 samples the top margin at 6–18 pt for a white page, and the
+     draft line's text starts at about 19.8 pt — shrinking this margin can put the two in contact. */
+}
+
+/* ============================ base ============================ */
+body{
+  font-family:'Handout Sans','Segoe UI','Helvetica Neue',Arial,sans-serif;
+  color:var(--ink);
+  font-size:11.5pt;
+  line-height:1.55;
+  margin:0;
+  /* no background — the printed page is white (paper-first, ink-neutral print) */
+}
+/* audience density — the render helper sets one of these on <body>. */
+body.audience-patient{ font-size:12pt; line-height:1.62; }      /* larger for older readers */
+body.audience-clinician{ font-size:10.5pt; line-height:1.48; }  /* denser; tables + references */
+
+p{ margin:.45em 0; }
+strong{ font-weight:600; }
+em{ font-style:normal; }
+small{ font-size:.86em; color:var(--ink-soft); }
+
+/* ============================ headings ============================ */
+h1,h2,h3,h4{
+  font-family:'Spectral','Source Serif 4',Georgia,'Times New Roman',serif;
+  font-weight:600; line-height:1.2; color:var(--head);
+  break-after:avoid; page-break-after:avoid;
+}
+h1{ font-size:1.9em; margin:0 0 .1em; letter-spacing:.1pt; }
+h2{ font-size:1.32em; margin:1.4em 0 .4em; padding-bottom:2.5pt;
+    border-bottom:1px solid var(--accent); }  /* the one deliberate green section-rule */
+h3{ font-size:1.1em; font-weight:500; margin:1.1em 0 .3em; }
+h4{ font-size:1em; margin:.9em 0 .25em; }
+
+/* document meta line: the "*Dla: … · date*" paragraph right after the title (patient handout) */
+h1 + p, p.docmeta{ color:var(--ink-soft); font-size:.9em; margin-top:.1em; }
+/* identity line — one line: "Pacjent/Dla: <name> (<age>) · <occasion> <date>". Name + consultation
+   date are emphasised with the existing semibold weight; clear for a clinician AND for a family sorting several handouts. */
+p.identity{ color:var(--ink); font-size:.96em; margin:.2em 0 .5em; }
+p.identity em{ font-style:normal; font-weight:600; }
+/* clinician closing note (origin + limits) — not patient data: set it apart (muted + smaller). */
+.metodyka{ color:var(--ink-soft); font-style:normal; font-size:.9em; }
+
+/* ============================ lists ============================ */
+ul,ol{ padding-left:1.35em; margin:.5em 0; }
+li{ margin:.2em 0; }
+li::marker{ color:var(--accent); }
+/* numbered references (Piśmiennictwo) — one logical line per item, tight, hanging indent */
+ol li{ margin:.22em 0; padding-left:.1em; }
+
+/* ============================ callouts / evidence legend ============================ */
+/* No fill (ink-lean): a thin green left-rule sets it apart; the text itself stays neutral ink. */
+blockquote{
+  border-left:3px solid var(--accent);
+  margin:.9em 0; padding:.1em .85em;
+  font-size:.92em; color:var(--ink);
+}
+blockquote p{ margin:.25em 0; }
+blockquote strong{ color:var(--head); }
+
+/* provenance footnote — mark with {: .provenance}. No top border: templates place a `---` (hr)
+   before it, which is the separator; a border here would double the rule. */
+.provenance{ font-style:normal; color:var(--ink-soft); font-size:.87em; margin-top:1.1em; }
+
+/* ============================ tables ============================ */
+/* No fills, no vertical borders: bold header over a dark-neutral rule, thin light-grey row
+   hairlines. Ink-lean, and still reads clearly off a cheap black-and-white print run. */
+table{ width:100%; border-collapse:collapse; margin:.7em 0; font-size:.92em; }
+thead{ display:table-header-group; }             /* repeat header across page breaks */
+tr{ break-inside:avoid; }
+th{ color:var(--ink); font-weight:600; text-align:left; padding:5px 8px;
+    border-bottom:1.4px solid var(--head); vertical-align:top; }
+td{ padding:5px 8px; border-bottom:.75px solid var(--rule); vertical-align:top; }
+caption{ caption-side:top; text-align:left; font-weight:600; color:var(--head);
+    font-size:.92em; margin-bottom:.2em; }
+
+/* ============================ rules / links / misc ============================ */
+hr{ border:none; border-top:1px solid var(--rule); margin:1.3em 0; }
+/* link text stays neutral ink (no coloured text) — the thin green underline is what marks it as a
+   link, echoing the h2/list/blockquote accent marks */
+a{ color:var(--ink); text-decoration:none; border-bottom:1px solid var(--accent); }
+code{ font-family:'Source Code Pro',ui-monospace,'DejaVu Sans Mono',monospace; font-size:.9em; }
+:not(pre) > code{ white-space:pre-wrap; }
+table,blockquote,ul,ol{ page-break-inside:auto; }
+
+/* No @media screen block: the on-screen reading copy is preview.css (ADR-0058); this stylesheet is
+   print-only (weasyprint renders media_type='print', so a screen-gated rule never reached the PDF). */
+
+/* ---- change log ----
+   2026-07-05  Created (ADR-0032). Warm Editorial; bundled OFL fonts (Spectral, Source Sans 3) with
+               Polish coverage; patient/clinician density; styled tables, evidence legend, refs <ol>.
+   2026-07-05  Ink-lean revision (operator feedback: too warm; print must be white to save ink).
+               Headings → dark sienna (readability); ALL filled areas (table header, zebra rows,
+               legend panel, code) moved to @media screen only, so the printed PDF is white with
+               hairline rules — minimal ink. Screen view keeps the warmth. (ADR-0032 point 4.)
+   2026-07-05  Refinements: merged identity+occasion into one `.identity` line (name/date italic); grades
+               bold (**[A]**), references plain [1]; Przebieg a sub-label (no lone bullet); Metodyka
+               muted+italic (`.metodyka`), heading drops "(apendyks)"; helper-injected footer (id/date/attr).
+   2026-09-13  Ink-neutral revision (cheap home-printer ink): body/heading/table/link text is now
+               neutral grey (R=G=B) — --ink #1F1F1F, --ink-soft #555555; Tabularium green (#3D5A48)
+               replaces terracotta/sienna as the ONLY accent colour, restricted to thin lines/marks
+               (h2 underline, list markers, blockquote rule, link underline); ordinary hairlines stay
+               neutral grey (--rule #BFBFBF). Removed the dead @media screen block (superseded by the
+               preview.css screen view, ADR-0058). (ADR-0032 point 5.)
+   2026-09-20  Upright simplification: removed synthetic italics; ordinary emphasis inherits its weight.
+               Bold and the identity line retain heavier type; muted, smaller type distinguishes notes.
+               Preview uses the same upright treatments; its former italic faces are no longer needed.
+   2026-10-11  Body face renamed 'Source Sans 3' → 'Handout Sans' (files, name table, this sheet and
+               the helper's footer): the merged files are an OFL Modified Version and Adobe reserves
+               the name "Source". Glyph tables unchanged, so the printed page is unchanged. */

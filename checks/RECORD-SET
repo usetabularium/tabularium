@@ -1,0 +1,54 @@
+# checks/RECORD-SET — the single list of paths that are NOT product (ADR-0050 Part B)
+#
+# One entry per line:   record <path>   |   tooling <path>
+#   record   this path holds (or holds the history of) the family's records. A tree that has any of
+#            these IS a records tree — that is the OBSERVABLE guard L20 derives the instance mode
+#            from. `.tabularium-instance` only *asserts* the mode; it never selects it (a marker that
+#            selected it failed open in the dangerous direction — see ADR-0050 Part B, L20).
+#   tooling  untracked per-instance machinery. Not a record; never makes a tree a records tree.
+#            L19 tolerates changes here for the same reason it tolerates changes under a record path.
+#
+# Paths are REPO-ROOT-RELATIVE and LITERAL — not gitignore patterns. A directory entry ends in `/`;
+# a file entry does not. Never a leading `/`: these strings are fed to `git check-ignore` from the
+# repo root, where a leading slash would read as an absolute path. Anchoring discipline lives on the
+# `.gitignore` side (the 2026-07-31 `_inbox` bug: an unanchored `_inbox/` there also
+# matched `_templates/person/med/_inbox/`); here every entry is already rooted by construction, and
+# the drift check below is what proves the two files still say the same thing.
+#
+# Blank lines and `#` comments are ignored; a trailing `#` comment is stripped from the path field.
+#
+# CONTRACT (guard L20, `checks/check.sh`): every path listed here must be ignored by git, so this
+# file and `.gitignore` stay mirrored — one list, one drift check. Adding a line here without the
+# matching `.gitignore` line reds the board.
+
+# ── records ──────────────────────────────────────────────────────────────────────────────────────
+record  patients/                        # the people: profiles, medications, sources, analyses, handouts
+record  _shared/med/                     # joint clinical matter
+record  _shared/nmed/                    # joint non-clinical matter
+record  reference-library/index.md       # condition-specific reference lists — kept specific for care,
+record  reference-library/whitelist.txt  #   never genericized for publish
+record  reference-library/blacklist.txt
+record  outputs/                         # local backup tarballs (backup layer 2) — whole-tree, PII
+record  .snapshots/                      # canonical-doc recovery points (backup layer 1) — PII
+record  _archive/                        # cold storage for retired helpers, CARE's former top-level inbox included (ADR-0030) — PII-laden history
+record  cc-prompts/                      # host-task prompt register — PII-laden history (ADR-0019)
+record  docs/strategy/                   # private packaging/licensing/distribution notes
+#   NB: only `strategy/` is a record path. The rest of `docs/` is DEV-local planning — untracked and
+#   never exported, but not a record (contributing/documentation.md).
+
+# Tooling-SHAPED records: listed as `record` so L19 tolerates them, but EXCLUDED from L20's
+# has_records observable — a tree holding only these is not a records tree (ADR-0050).
+#   NB (2026-09-06, ADR-0050): `checks/publish-skeleton.sh` left this list. It carries no token since
+#   the A2 move and is tracked product now — the flip-time export gate, not a record.
+record  checks/OFFSITE-DEST              # names the operator's cloud ACCOUNT (ADR-0045)
+
+# ── per-instance tooling (untracked; installed, not committed) ────────────────────────────────────
+tooling .tabularium-instance             # the instance marker itself: dev | care
+tooling .venv-render/                    # pinned handout-render environment (both instances)
+tooling checks/FIREWALL-REGISTRY         # path of the out-of-tree token registry (ADR-0050 Part A2)
+tooling checks/PRIVATE-MODE-ID           # path of the private-mode identifier's own file (ADR-0050 point 9)
+tooling checks/CARE-EXCEPTION            # L19 break-glass (reason/date/expires ≤ 7 days)
+tooling checks/CARE-RELEASE              # the release tag this CARE instance adopted (L19 anchor)
+tooling checks/BOARD-LOG                 # retired 2026-11-08: a care tree's leftover board log (ids and clocks); kept until a release whose note deletes it
+tooling .claude/                         # session tooling, worktrees, local settings
+tooling .DS_Store                        # OS cruft

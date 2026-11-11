@@ -1,0 +1,17 @@
+# The national ID numbers private mode knows (ADR-0062). One row per scheme, four tab-separated
+# fields: key, tesseract language(s), residue shape, plain words.
+# - A profile's private-mode line names the person's schemes with ⟨id-scheme KEY⟩, several as
+#   ⟨id-scheme KEY,KEY⟩. A line without the exact tag reads as EVERY row here (ADR-0077). The key
+#   `unlisted` is reserved: a number not on the list, covered by hand; no row may use it.
+# - The residue shape is what guard L10 and its Python companions red in a marked person's derived
+#   text. Write it as a POSIX extended regular expression that Python reads the same way: bracket
+#   ranges such as [0-9], no [[:digit:]] classes, no lookaround, a tab written \t and no other
+#   backslash (L10 receives a real tab). Bound a shape with
+#   (^|[^0-9A-Fa-f]) and ([^0-9A-Fa-f]|$) so it matches neither inside a longer number nor inside a
+#   hash or a `doc-` folder name. Where a bare run looks like a phone or a barcode, search only the
+#   separated or keyed forms: the masking tool still masks the bare one on the page. The first row
+#   keeps the shape it always had.
+# - A tag is read strictly (ADR-0073): on the marker line a mistyped tag is refused, never read as absent.
+# - Never write a scheme's local name or a printed label here: an instance may list its own as a firewall token.
+pl-id	pol	[0-9]{11}	the Polish national identity number
+us-ssn	eng	(^|[^0-9A-Fa-f])[0-9]{3}(-|–|—|[ \t]| )+[0-9]{2}(-|–|—|[ \t]| )+[0-9]{4}([^0-9A-Fa-f]|$)	the US nine-digit personal taxpayer number

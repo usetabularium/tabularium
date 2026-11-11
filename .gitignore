@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PII FIREWALL. This repository's copies may sit beside health records. Patient
+# data must NEVER reach git. Its history carries the *reusable skeleton only* — no
+# names, no records, no sources — and this .gitignore is what keeps it so.
+# NB (2026-09-06, ADR-0050 Part B): the blanket "NO-REMOTE by design (ADR-0017)"
+# rule was the shape of a single tree holding both the product and the records.
+# It is now split. This file is written in the DEV instance — record-free by
+# construction (guard L20 derives that from the tree) — which has a private
+# remote: pre-push allows a push from a `dev`-marked tree that holds no record.
+# An exported skeleton starts with no remote; a CARE checkout, which holds the
+# records, never pushes at all. ADR-0017 is reversed for DEV only; the records
+# still have no remote of any kind.
+#
+# Publishing a skeleton is a separate, gated, fresh EXPORT (publish-skeleton.sh,
+# held by checks/PUBLISH-HOLD) — never a push of THIS repository's history, and
+# never a visibility flip of it. Pushing DEV to its private remote is not
+# publishing.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# All patient records (profiles, meds, sources, analyses, handouts) — PII
+# ROOT-ANCHORED (2026-08-01 drift sweep) with every other DENY mirror below: these entries mirror
+# top-level DENY paths, so an unanchored form would also match a same-named directory NESTED inside
+# an ALLOW tree and silently drop it from the export commit — the `_inbox` bug of 2026-07-31.
+# NB for an ADOPTER of the skeleton this still protects their own records: the anchor binds the
+# pattern to the repo root, which is where patients/ lives, at any depth beneath it.
+/patients/
+
+# Joint clinical / non-clinical matter — PII
+_shared/med/
+_shared/nmed/
+
+# docs/ — local to the DEV main checkout, never tracked (operator, 2026-10-28): the issue registers,
+# roadmap, runbooks and drafts stay off the remote; contributing/documentation.md
+# says why. Do not re-include a file here. `docs/strategy/` is also a RECORD-SET path (CARE).
+/docs/
+
+# The reference library's index and lists — kept useful for this instance's own care, not
+# genericized for publish; local-only.
+reference-library/index.md
+reference-library/whitelist.txt
+reference-library/blacklist.txt
+
+# Operational: host-task prompts (cc-prompts/) — PII-laden history, local only.
+# Since 2026-09-06 this directory exists only in the CARE instance (frozen at 036); the pattern stays
+# here as the DENY mirror, so a stray copy in DEV could never be committed.
+# NB (2026-09-06, ADR-0050): `checks/publish-skeleton.sh` was ignored here while it carried the PII
+# token registry. Since the A2 move it carries no token, and as the flip-time export gate it is
+# tracked product — so it is neither gitignored nor a RECORD-SET entry any more.
+/cc-prompts/
+# Off-machine backup destination (ADR-0045). One line: the absolute path of the cloud-synced folder.
+# It names the operator's provider ACCOUNT, so it is PII — never committed, never published. The
+# script that reads it (checks/backup-offsite.sh) ships; this file does not.
+checks/OFFSITE-DEST
+# L19 break-glass ticket (ADR-0050): reason + date + expiry ≤ 7 days. Deliberately untracked — an
+# exception is a local, dated, expiring fact about ONE machine, never a committed part of the product.
+/checks/CARE-EXCEPTION
+# The release tag THIS CARE instance adopted (ADR-0050; L19's anchor). One line, written by the
+# release-acceptance session. Per-instance and therefore untracked: which release a given machine has
+# accepted is a fact about that machine, and committing it would make every instance claim the same one.
+/checks/CARE-RELEASE
+# CARE's board log, retired 2026-11-08: a care tree may still hold one (guard ids and clocks). Kept
+# ignored until a release whose note deletes it (checks/README.md).
+/checks/BOARD-LOG
+# Path of the out-of-tree firewall token registry (ADR-0050 Part A2). One line, an absolute path
+# naming a location in the operator's home — never committed, never published.
+/checks/FIREWALL-REGISTRY
+# Path of the private-mode identifier's own file beside it (ADR-0050 point 9). Same rules.
+/checks/PRIVATE-MODE-ID
+
+# CARE's cold storage of PII-laden history (retired HANDOVER, retired cc-prompts, the former top-level
+# inbox) — ADR-0030; `/_archive/` is gitignored and publish-DENY-listed. `/_inbox/` stays ignored
+# though no instance uses it (ADR-0030 point 7): a stray one is never staged in DEV and
+# never printed by guard L19 in CARE, where a file name can carry a private-mode identifier.
+# ROOT-ANCHORED (2026-07-31, cc-prompts/036): the DENY entries are top-level; the old unanchored
+# `_inbox/` also matched `_templates/person/med/_inbox/` at any depth, so the EXPORT's fresh
+# `git add` silently dropped that shipped template README (locally it stayed tracked — tracked
+# overrides ignore — which is why only the published clone, and its CI, saw the hole).
+/_inbox/
+/_archive/
+
+# NB: CLAUDE.md is now ABSTRACT (no names, no real conditions) → safe to publish.
+#     patients/README.md (the roster) is covered by the patients/ rule above.
+
+# Local backups (PII): .snapshots/ tarballs + outputs/_snapshots/*.tgz
+# (outputs/ is also DENY-listed in checks/publish-skeleton.sh — keep the two mirrored)
+/.snapshots/
+/outputs/
+
+# Instance marker (ADR-0050): one line — `dev` or `care`.
+# Per-INSTANCE, so it is installed rather than committed; guard L20 reads it. ROOT-ANCHORED: the
+# marker is a property of the tree's root, and an unanchored form would let a stray copy at any
+# depth pass unnoticed.
+/.tabularium-instance
+
+# Session tooling: local settings, scratch worktrees (ADR-0040). Previously ignored only piecewise,
+# and only in `.git/info/exclude` (worktrees/, the scheduled-task and registry files, …) — which is
+# per-checkout and does NOT travel with a clone, so the paths it missed (settings.local.json) showed
+# as untracked strays and a fresh clone would see all of them.
+# ROOT-ANCHORED like every other DENY mirror. Also RECORD-SET `tooling`: guard L20 checks that.
+/.claude/
+
+# OS / scratch
+.DS_Store
+*.tmp
+
+# Kept details (ADR-0068, ADR-0075): an editor's backup or a copy of a person's fill-in form or identity file
+# holds their withheld values. Inside patients/ it is ignored already; this keeps one saved anywhere
+# else in the tree from being committed, and searches that honour ignore rules skip it. Unanchored on
+# purpose. The board, the read guard, snapshots and backups find these files by name or by walking the
+# folder, never through ignore rules.
+*never-api-identity*
+
+# python bytecode (tools/) — never track, never ship
+__pycache__/
+*.pyc
+
+# Repo-local pinned render environment (ADR-0039) — rebuilt from
+# _templates/handout-assets/requirements-render.txt; never track, never ship
+.venv-render/
+
+# Behavioral-eval run ledgers (evals/results/) are tracked in DEV and never ship: the export's
+# DENY-list carries them. A NEW case file is tracked-but-not-exported until it is promoted by name
+# (evals/cases/HOLDOUT).
+
+# API key for API-billed eval runs (operator, 2026-10-28): `ANTHROPIC_API_KEY=…`, loaded only for a run
+# (`set -a; . .env; set +a`). A secret — never track, never ship. Unanchored, so a stray copy in any
+# folder is ignored too.
+.env

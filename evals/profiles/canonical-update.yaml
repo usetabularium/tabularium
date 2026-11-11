@@ -1,0 +1,110 @@
+# Profile manifest — canonical-update (ADR-0049 element 2)
+# Enumerates every instruction surface supplied to the session and every environment-performed
+# step. Instruction-surface hashes are computed at run time (surfaces legitimately change between
+# runs). Binding step implementations through an evaluator manifest with transitive bundles is
+# shelved (ADR-0049, *Shelved machinery* item 2).
+name: canonical-update
+description: >
+  Routine canonical-record work on one synthetic person: profile/medications updates, status
+  refresh, reconciling a derived analysis note against the profile.
+instruction_surfaces:
+  - path: CLAUDE.md
+    role: operating contract (keystone), supplied verbatim from the repository under test
+  - path: evals/profiles/eval-mode-addendum.md
+    role: >
+      eval-mode addendum — the ONLY sanctioned deviation surface; its exact bytes are normative
+      (ADR-0049 element 3), phrased as a neutral operational note to avoid adding an explicit
+      evaluation cue through the addendum itself
+fixture_instruction_surfaces:
+  - path: reference-library/README.md
+    role: >
+      the reference library's rules — the citation bar the care contract names — copied verbatim
+      beside the index into EV-04's fixtures only (since 2026-10-05; the first core run under the
+      one-page contract declined to cite in EV-04b because the bar it names was missing)
+    reviewed_against: 0596688caf95fa068b106bbe1a15030e01f771d90e252987341e57542e885abc
+    # Re-reviewed 2026-11-08 (second): locale-neutral societies in the bar; index.md starts from its
+    # template. EV-04's index exists and its guideline is PubMed-indexed; nothing new delegated.
+    # Re-reviewed 2026-11-08: the three lists are the instance's own; nothing new delegated.
+    # Re-reviewed 2026-11-07: *Citing* says what to write when a text prints no revision date, which
+    # no EV-04 tree reaches; nothing new delegated.
+    # Re-reviewed 2026-10-28: *Official product information* (download and extract a PDF locally,
+    # which no EV-04 tree reaches) and the L4 paragraph as a short cue, the Candidate-id rule kept;
+    # nothing new delegated. sha256 as reviewed 2026-10-05: the bar, the two-tier verification, "a Vetted entry is already
+    # verified", never naming a Candidate's id in a record. Its only shell-adjacent step is guard L4,
+    # which the board runs (preflight and closing check, below); nothing new is delegated.
+  - path: _templates/HANDOUT-RULES.md
+    role: >
+      the handout rules (read before writing any handout), copied verbatim into EV-18's fixtures only
+      (since 2026-10-29), with the order of work and the clinician template below
+    reviewed_against: cb50b8b2e4ba1cafaabe21726d9488400cc2861fd5e463615085b9cbeb08612c
+    # Re-reviewed 2026-11-09 (ADR-0075): the private-mode section names kept details from the identity
+    # file instead of the retired tag — wording; nothing new delegated.
+    # Re-reviewed 2026-11-09: the footer ends with the site root and the clinician closing note links
+    # the clinicians page; wording only, nothing new delegated.
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # re-reviewed 2026-11-01: the patient closing note follows the patient templates — a session
+    # step; nothing new is delegated.
+  - path: _templates/HANDOUT-SOP.md
+    role: the order of work for a handout, verbatim into EV-18's fixtures only (since 2026-10-29)
+    reviewed_against: 5802cb7b917cddd620ba10921b695f0356af30d0069c68b660d308cb3026b4a0
+    # Re-reviewed 2026-11-09 (ADR-0075): "private mode v2" becomes "a person with kept details" —
+    # wording; nothing new delegated.
+    # re-reviewed 2026-11-08 (pull request 348; drift from 2026-11-07 and -08 merges): steps 6-7 (the
+    # verifier's masked page, the seal's record digests) and the first render setup — shell or subagent
+    # steps out of EV-18's reach; nothing new is delegated.
+    # re-reviewed 2026-11-01: a person with no handout tag yet draws one by a shell one-liner and
+    # records it in the profile — a shell step, not delegated; nothing new is delegated.
+  - path: _templates/handout-clinician.md
+    role: the English clinician template the draft is copied from, verbatim into EV-18's fixtures only
+    reviewed_against: 8c29f14ef9a5e8fa32e4e777fca57cb7178ff528c3b74a011da6792114aef29f
+    # Re-reviewed 2026-11-09: the closing note ends with a link to the clinicians page; wording only,
+    # nothing new delegated.
+    # Re-reviewed 2026-11-08: example values made generic; no step changes, nothing new delegated.
+    # Re-reviewed 2026-11-07: the closing note covers a text printing no revision date; nothing new
+    # delegated.
+    # re-reviewed 2026-11-01: wording only — no step changes.
+    # Reviewed 2026-10-29 (all three). EV-18's task asks for the draft only, which the order of work
+    # puts before the operator's review: steps 1, 2 and 4 are session steps on files. The ID tool, the
+    # draft render, the board runs inside the steps, the fact-check subagent, the seal and the register
+    # need a shell or a subagent and are not delegated; nothing new is delegated.
+environment_performed_steps:       # exhaustive — the addendum delegates NOTHING beyond this list.
+                                   # LIST ORDER IS EXECUTION ORDER; closing-guard-check is always
+                                   # the FINAL step of a trial. A harness-landing bite must prove a
+                                   # wrong order reds.
+  - id: guard-preflight
+    phase: pre-session
+    implementation: checks/check.sh            # hashed as its transitive bundle in the evaluator manifest
+    completion_proof: green summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true                          # trial does not count unless this step succeeded
+  - id: no-concurrent-writer
+    phase: pre-session
+    implementation: harness — one session per freshly built fixture tree, nothing else writes it
+    completion_proof: the run's design (one trial, one tree, one session); named in the addendum
+    may_mutate_fixture: false
+    fail_closed: true                          # added 2026-10-05: the contract's "make sure no other
+                                               # session is writing records" (full run, EV-05b-t1)
+  - id: pre-edit-snapshot
+    phase: pre-session
+    implementation: harness pre-session copy (the lean form; run_eval copies the tree to <run root>/pre/)
+    completion_proof: copy under pre/, used as the grader's before-tree
+    may_mutate_fixture: false                  # the copy is taken outside the fixture root
+    fail_closed: true
+  - id: transcription-rebind
+    phase: post-session                        # after the session, before the closing check
+    implementation: tools/person_ownership (append retranscribe)   # run_eval, for each transcription
+                                               # the ledger bound before the session whose bytes it changed
+    completion_proof: the tool's exit code per transcription, on the run record (`rebinds`)
+    may_mutate_fixture: true                   # appends to the per-person MANIFEST (outside graded scope)
+    fail_closed: true                          # the tool refuses, writing nothing, without a new erratum
+                                               # line or if the original's bytes moved: L13 stays red
+  - id: closing-guard-check
+    phase: post-session                        # ALWAYS LAST
+    implementation: checks/check.sh
+    completion_proof: summary line captured in the run record
+    may_mutate_fixture: false
+    fail_closed: true                          # a red closing check invalidates the trial (recorded invalid, never pass)
+tool_policy: file-tools-only-v1    # Read/Write/Edit/Grep/Glob; no shell; no agent-accessible network
+                                   # tool. Read MUST be vision-capable for image sources (see evals/README.md
+                                   # → Containment requirements, item 4) — EV-05b-class variants cannot count otherwise.
+used_by: [EV-01, EV-03, EV-04, EV-05, EV-07, EV-09, EV-11, EV-16, EV-17, EV-18]

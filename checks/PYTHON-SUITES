@@ -1,0 +1,19 @@
+# The Python test suites the bite suite (checks/selftest.sh) must find: one path per line, every
+# tools/*/ and evals/*/ test_*.py that ships. The runner is red when a listed suite is missing (deleted,
+# renamed or moved) or when it finds one listed nowhere: a new suite gets its line in the same change.
+# Suites in a folder that does not ship go in checks/PYTHON-SUITES-DEV instead, which the export leaves out.
+evals/harness/test_codex.py
+evals/harness/test_codex_trace.py
+evals/harness/test_compare.py
+evals/harness/test_containment.py
+evals/harness/test_judge.py
+evals/harness/test_scores.py
+evals/harness/test_stress.py
+tools/claude-hooks/test_context_health.py
+tools/claude-hooks/test_registry_guard.py
+tools/handout_attest/test_attest.py
+tools/interview_capture/test_interview_capture.py
+tools/original_view/test_view.py
+tools/person_ownership/test_ownership.py
+tools/private-mode/test_identity.py
+tools/private-mode/test_redact_ids.py

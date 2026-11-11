@@ -1,0 +1,52 @@
+{
+  "$comment-1": "Pinned eval session settings (ADR-0049 element 5). Loaded with --settings. See session.py docstring 'Pinned settings' for the probe record behind every key here.",
+  "$comment-2": "PRIMARY tool enforcement is the --tools allowlist on the command line, which is verifiable: the init event echoes the resulting tool set. This file is defence-in-depth plus the permission mode. Both are asserted from the init event by run_session(); a mismatch invalidates the trial.",
+  "$comment-2b": "defaultMode below is the ONLY source of the permission mode — run_session deliberately does not also pass --permission-mode, because probing showed the flag masks a silently-discarded settings file. init.permissionMode is therefore a receipt that this file was honoured, deny list included.",
+  "$comment-3": "Path-scoped containment is deliberately NOT expressed here. The fixture root is a fresh per-run directory, so no static rule can name it; directional containment is proven per-run by containment_selftest() instead, fail-closed, before any trial counts.",
+  "$comment-3b": "enabledPlugins switches off the plugins the CLI ships built in (probed 2026-09-28, 2.1.280: a fresh config dir still loads telemetry@builtin, and agents-md@builtin in an authenticated session; 2026-10-05, 2.1.289 added cc-plugin-plugin-authoring@builtin). With all three false init.plugins is []; run_session still refuses any plugin, so a new built-in stops the run until it is added here.",
+  "$comment-4": "Keep this file minimal. Probed 2026-09-02: unknown keys are tolerated, but ONE bad enum value makes the CLI discard the WHOLE file silently in --print mode. Every key below was probed as loading successfully.",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [],
+    "ask": [],
+    "additionalDirectories": [],
+    "deny": [
+      "Bash",
+      "BashOutput",
+      "KillShell",
+      "Task",
+      "TaskCreate",
+      "TaskGet",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+      "TaskUpdate",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "TodoWrite",
+      "Skill",
+      "ToolSearch",
+      "Workflow",
+      "SendMessage",
+      "PushNotification",
+      "ScheduleWakeup",
+      "Monitor",
+      "DesignSync",
+      "ReportFindings",
+      "EnterWorktree",
+      "ExitWorktree",
+      "CronCreate",
+      "CronDelete",
+      "CronList"
+    ]
+  },
+  "hooks": {},
+  "enabledPlugins": {
+    "telemetry@builtin": false,
+    "agents-md@builtin": false,
+    "cc-plugin-plugin-authoring@builtin": false
+  },
+  "enableAllProjectMcpServers": false,
+  "includeCoAuthoredBy": false
+}

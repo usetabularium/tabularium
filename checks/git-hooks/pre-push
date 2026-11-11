@@ -1,0 +1,234 @@
+#!/bin/sh
+# Tabularium pre-push guard — ADR-0017's hard block, made INSTANCE-AWARE by ADR-0050 Part B.
+#
+# Until the split this hook blocked EVERY push unconditionally, and it was right to: one working tree
+# held the product and the family's records at once, so "push" and "publish the records" were the
+# same act. ADR-0050 separates them — DEV is the product tree and IS the private skeleton repository
+# (the ADR-0017 reversal is scoped exactly there), CARE is a pull-only checkout that holds the records
+# and never commits. So the rule becomes: a push is allowed only from a tree that is BOTH marked `dev`
+# AND demonstrably record-free. The no-remote rule survives where it actually mattered — for the
+# records, which are never committed anywhere.
+#
+# THE MARKER NEVER AUTHORISES ON ITS OWN. `.tabularium-instance` only ASSERTS a mode; guard L20
+# DERIVES it from an observable, because a marker that SELECTED the mode failed open in the dangerous
+# direction (ADR-0050 Part B, L20). This hook does the same: it re-derives the observable from
+# `checks/RECORD-SET` — any `record` path present, other than the tooling-shaped checks/OFFSITE-DEST L20 also
+# excludes — and blocks if the tree holds one, whatever the marker says.
+#
+# FAIL CLOSED. No marker, an unreadable/symlinked/multi-line marker, a RECORD-SET missing from BOTH
+# HEAD and the working tree, a malformed one, or one naming no record path all BLOCK: this hook never
+# lets a push through having checked nothing. The RECORD-SET is read from HEAD when HEAD has it, so a
+# working-tree edit cannot shrink the observable for the run that is pushing; the reason line says
+# which source was used. Output names no record path (a locator under a record root can carry a
+# person handle — the L10/L20 discipline); it names the reason.
+#
+# A LINKED WORKTREE inherits its family's marker and its family's record observable (step 1 below;
+# ADR-0050 point 7) — the marker and the records are untracked, so a worktree has
+# neither of its own and would otherwise block on "no marker" in the one tree kind that exists to
+# edit the product.
+#
+# WHAT LEAVES IS EACH PUSHED REF'S OWN TREE (step 3; ADR-0022 point 6). A push may name
+# a branch that is not checked out, so the checked-out tree alone says nothing about it: every
+# non-deletion ref's tree is checked against the record set read from that ref (HEAD's when it has
+# none), and one that tracks a record path blocks.
+#
+# Install into the LOCAL working repo — `checks/install-instance.sh dev` does this, or by hand:
+#   cp checks/git-hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# One hooks directory serves the whole family (`.git/hooks` in the main checkout), so installing from
+# a linked worktree would push that worktree's branch of this file onto every tree — the installer
+# refuses to, and so should you: run it in the main checkout.
+#
+# `git push --no-verify` skips this hook and leaves no mark (contributing/gates.md): client-side hooks are a
+# discipline aid, not an enforcement boundary. Never use it, never advise it.
+# Portable: POSIX sh / bash 3.2 / BSD userland; PORT-linted + bite-tested in checks/selftest.sh (HOOK).
+set -u
+
+block(){
+  echo "pre-push BLOCKED: not a record-free DEV instance — pushing is forbidden." >&2
+  echo "  reason: $1" >&2
+  echo "  A push is allowed only when .tabularium-instance reads exactly 'dev' AND no checks/RECORD-SET" >&2
+  echo "  record path exists in this tree (ADR-0050 Part B). The records are never committed anywhere." >&2
+  echo "To share the de-identified skeleton, use checks/publish-skeleton.sh (a separate export), not this repo." >&2
+  exit 1
+}
+
+top="$(git rev-parse --show-toplevel 2>/dev/null)" || top=""
+if [ -z "$top" ] || ! cd "$top"; then
+  block "cannot find the repository root — refusing to push from an unidentifiable tree"
+fi
+
+# ---- 1. the marker: present, a readable regular file, exactly one line, and exactly `dev` ----
+# A LINKED WORKTREE (ADR-0040) has no marker of its own — the marker is untracked and untracked files
+# are per-tree — so it INHERITS its family's, exactly as guard L20 does since 2026-09-10
+# (ADR-0050 point 7). Before that every push from a scratch worktree blocked on "no marker" while the
+# family was plainly DEV, and the fix an operator reaches for (writing a marker in the worktree by
+# hand) is the one that can silently disagree with the family. FAIL CLOSED: an unidentifiable main
+# checkout blocks, and a worktree marker CONTRADICTING the family blocks.
+MARK=".tabularium-instance"
+MSRC="this tree"
+WTMAIN=""
+if [ -L "$MARK" ]; then
+  block "$MARK is a symlink — the marker is never followed through a link"
+elif [ -e "$MARK" ] && { [ ! -f "$MARK" ] || [ ! -r "$MARK" ]; }; then
+  block "$MARK is not a readable regular file"
+fi
+# The derivation is NOT repeated here. `checks/check.sh --instance-mode` answers what checkout
+# family this tree is in and what that family asserts, and this hook consumes that answer (ADR-0050
+# point 7). Three copies of one rule is what let the copies disagree about the same
+# tree, and what made one worktree fix cost three fixes.
+# FAIL CLOSED: no answer, an unusable answer, or an unreadable check.sh blocks — the marker is the
+# only thing between a push and a records tree.
+IM="$top/checks/check.sh"
+if [ -L "$IM" ] || [ ! -f "$IM" ] || [ ! -r "$IM" ]; then
+  block "checks/check.sh is missing, unreadable or symlinked — the instance derivation cannot be run"
+fi
+im_out="$(bash "$IM" --instance-mode "$top" 2>/dev/null)" || im_out=""
+[ -n "$im_out" ] || block "the instance derivation (checks/check.sh --instance-mode) produced nothing — this tree's checkout family cannot be identified"
+im_kind=""; im_status=""; im_marker=""; im_mstate=""; im_reason=""; im_family=""
+while IFS='=' read -r im_k im_v; do
+  case "$im_k" in
+    kind)         im_kind="$im_v" ;;
+    status)       im_status="$im_v" ;;
+    marker)       im_marker="$im_v" ;;
+    marker_state) im_mstate="$im_v" ;;
+    reason)       im_reason="$im_v" ;;
+    family)       im_family="$im_v" ;;
+  esac
+done <<IMEOF
+$im_out
+IMEOF
+[ -n "$im_kind" ] || block "the instance derivation returned nothing usable — this tree's checkout family cannot be identified"
+if [ "$im_kind" = "worktree" ]; then
+  if [ "$im_status" = "ok" ]; then
+    WTMAIN="$im_family"          # known family: its records are probed in section 2 below
+    if [ "$im_mstate" = "ok" ]; then
+      if [ -e "$MARK" ]; then
+        lmk="$(tr -d '\r' < "$MARK" | sed '/^[[:space:]]*$/d' | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+        [ "$lmk" = "$im_marker" ] || block "this worktree asserts $(printf '%s' "$lmk" | cut -c1-32) but its main checkout asserts $(printf '%s' "$im_marker" | cut -c1-32) — the instance is a property of the checkout family, not of one tree; delete $MARK here and let it be inherited"
+      fi
+      MARK="$WTMAIN/.tabularium-instance"; MSRC="the main checkout, inherited by this linked worktree"
+    elif [ "$im_mstate" = "bad" ]; then
+      # Loud, not a block: the family is known and its records are still probed, but its marker is
+      # unreadable, so nothing is inherited and this tree's own marker governs — the plain-clone
+      # rule. A wrong answer here costs a rerun; a records tree is still caught by section 2.
+      echo "pre-push (LOUD): the checkout family's marker is unreadable — nothing inherited; this tree's own marker governs" >&2
+    fi
+    # marker_state=absent needs no line: the family simply asserts nothing, and the marker check
+    # below says so about this tree. Saying "unreadable" there sent the operator after a corrupt
+    # file that does not exist (round 3, finding 4).
+  else
+    echo "pre-push (LOUD): linked worktree, but ${im_reason:-the checkout family cannot be read} — nothing inherited; this tree's own marker governs" >&2
+  fi
+fi
+[ -e "$MARK" ] || block "no .tabularium-instance — a tree that asserts no instance mode is never a DEV instance${WTMAIN:+ (and the checkout family supplied none either)}"
+mraw="$(tr -d '\r' < "$MARK" | sed '/^[[:space:]]*$/d')"
+mcnt="$(printf '%s\n' "$mraw" | sed '/^[[:space:]]*$/d' | wc -l | tr -d '[:space:]')"
+marker="$(printf '%s\n' "$mraw" | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+# The marker's PATH is never printed once it may be the main checkout's: a directory name can carry
+# a person handle (the L10/L20 locator discipline). $MSRC names the source in words instead.
+[ "$mcnt" = "1" ] || block ".tabularium-instance ($MSRC) does not hold exactly one line (found ${mcnt:-0})"
+[ "$marker" = "dev" ] || block "marker is $(printf '%s' "$marker" | cut -c1-32)"
+
+# ---- 2. the observable: no record path may exist here, whatever the marker asserts ----
+# The list is read from HEAD first, and only from the working tree when HEAD has no such file (a
+# fresh/unborn checkout, or the published skeleton). The working-tree copy is editable by whoever is
+# pushing: deleting one `record` line there used to shrink the observable for this run, so a records
+# tree could be made pushable by an edit that is not itself being pushed (review round 4, F4). Which
+# source was used is named in every reason below, so a block is never ambiguous about what it read.
+SET="checks/RECORD-SET"
+if git cat-file -e "HEAD:$SET" 2>/dev/null; then
+  SRC="HEAD"
+  content="$(git show "HEAD:$SET" 2>/dev/null)" || block "cannot read $SET from HEAD — the record observable cannot be derived"
+else
+  SRC="the working tree (HEAD has no $SET)"
+  if [ -L "$SET" ] || [ ! -f "$SET" ] || [ ! -r "$SET" ]; then
+    block "$SET is missing, unreadable or symlinked in HEAD and in the working tree — the record observable cannot be derived"
+  fi
+  content="$(cat "$SET" 2>/dev/null)" || block "cannot read $SET from the working tree — the record observable cannot be derived"
+fi
+# Same parse as L20: `record <path>` / `tooling <path>`, `#` comments stripped, root-relative, no
+# `..`, no whitespace in the path (every consumer word-splits the list). Step 3 reuses it.
+rs_parse(){ # $1 = RECORD-SET text -> one record path per line, `__BAD__` for each malformed line
+  printf '%s\n' "$1" | awk '
+  { sub(/#.*/, ""); gsub(/^[ \t]+|[ \t]+$/, "") }
+  $0 == ""                          { next }
+  NF != 2                           { print "__BAD__"; next }
+  $1 != "record" && $1 != "tooling" { print "__BAD__"; next }
+  $2 ~ /^\//                        { print "__BAD__"; next }
+  $2 ~ /(^|\/)\.\.(\/|$)/           { print "__BAD__"; next }
+  $1 == "record"                    { print $2 }
+'; }
+parsed="$(rs_parse "$content")" || block "cannot parse $SET read from $SRC (awk failed)"
+nbad="$(printf '%s\n' "$parsed" | grep -c '^__BAD__$')"
+[ "$nbad" = "0" ] || block "$SET (read from $SRC) has $nbad malformed line(s) — each must read 'record <path>' or 'tooling <path>'"
+recs="$(printf '%s\n' "$parsed" | sed '/^[[:space:]]*$/d')"
+[ -n "$recs" ] || block "$SET (read from $SRC) names no record path — the instance observable is empty"
+
+# Tooling-SHAPED records (L20_SHAPED in check.sh — keep the two lists mirrored): listed `record` so
+# L19 tolerates them, but a tree holding only these is not a records tree. The publish script left
+# this list on 2026-09-06 (ADR-0050): it holds no token and is tracked product, not a record.
+SHAPED="checks/OFFSITE-DEST"
+present=0
+rec_probe(){ # $1 = base directory · sets present=1 on the first record path found under it
+  for e in $recs; do
+    skip=0
+    for s in $SHAPED; do
+      if [ "$e" = "$s" ]; then skip=1; fi
+    done
+    if [ "$skip" = "0" ]; then
+      p="$1/${e%/}"
+      if [ -e "$p" ] || [ -L "$p" ]; then present=1; return 0; fi
+    fi
+  done
+  return 0
+}
+rec_probe "."
+[ "$present" = "0" ] || block "records present — this tree holds a $SET record path (locator withheld), so it is not DEV (record set read from $SRC)"
+# In a linked worktree the records live in the MAIN checkout (they are untracked, so this tree can
+# only ever answer "record-free" about itself) — the family is the instance, so probe it too.
+if [ -n "$WTMAIN" ]; then
+  rec_probe "$WTMAIN"
+  [ "$present" = "0" ] || block "records present in the main checkout of this linked worktree — the family holds a $SET record path (locator withheld), so it is not DEV (record set read from $SRC)"
+fi
+
+# ---- 3. every pushed ref's OWN tree must track no record path (ADR-0022 point 6) ----
+# Step 2 probes the checked-out family, but a push may name any ref — a branch you are not on, a tag —
+# and it is that ref's tree that leaves. git hands the refs on stdin: "<local ref> <local sha> <remote
+# ref> <remote sha>". For each non-deletion ref the record set is read from the ref's own tree (the
+# commit that leaves says what is a record in it), or, when it has none, the one step 2 read. The
+# tooling-shaped entries are NOT excepted here: they are excepted above only because an untracked copy
+# sits on a DEV machine; TRACKED in a pushed tree, one is a record leaving. Only the tip tree is
+# examined, not the history the push carries. The bite suite is not run here: it runs before a pull
+# request is opened and in CI on every PR. FAIL CLOSED: a ref whose tree or record set cannot be read,
+# or whose set is malformed or names no record path, blocks. An empty ref list pushes nothing.
+tree_probe(){ # $1 = tree id, $2 = record paths · sets tfound=1 on the first one the tree tracks
+  tfound=0
+  for e in $2; do
+    if git cat-file -e "$1:${e%/}" 2>/dev/null </dev/null; then tfound=1; return 0; fi
+  done
+  return 0
+}
+nrefs=0
+while read -r lref lsha rref rsha; do
+  [ -n "${lref:-}" ] || continue
+  [ -n "${lsha:-}" ] || block "a ref line on stdin names no object for $lref — what it would push cannot be checked"
+  case "$lsha" in *[!0]*) ;; *) continue ;; esac   # all-zero local sha = a deletion: nothing leaves
+  nrefs=$((nrefs + 1))
+  rtree="$(git rev-parse --verify --quiet "${lsha}^{tree}" 2>/dev/null </dev/null)" || rtree=""
+  [ -n "$rtree" ] || block "$lref resolves to no tree — what it would push cannot be checked for record paths"
+  if git cat-file -e "$rtree:$SET" 2>/dev/null </dev/null; then
+    rsrc="$lref"
+    rcontent="$(git cat-file blob "$rtree:$SET" 2>/dev/null </dev/null)" || block "cannot read $SET from $lref — what it would push cannot be checked"
+    rparsed="$(rs_parse "$rcontent")" || block "cannot parse $SET read from $lref (awk failed)"
+    rbad="$(printf '%s\n' "$rparsed" | grep -c '^__BAD__$')"
+    [ "$rbad" = "0" ] || block "$SET (read from $lref) has $rbad malformed line(s) — each must read 'record <path>' or 'tooling <path>'"
+    rrecs="$(printf '%s\n' "$rparsed" | sed '/^[[:space:]]*$/d')"
+    [ -n "$rrecs" ] || block "$SET (read from $lref) names no record path — what it would push cannot be checked"
+  else
+    rsrc="$SRC, as $lref has no $SET"; rrecs="$recs"
+  fi
+  tree_probe "$rtree" "$rrecs"
+  [ "$tfound" = "0" ] || block "records in a pushed ref — $lref tracks a $SET record path (locator withheld; record set read from $rsrc)"
+done
+echo "pre-push: DEV instance, no records — push allowed ($nrefs pushed ref(s) checked; record set read from $SRC)" >&2
+exit 0

@@ -1,0 +1,26 @@
+# Pinned render environment for render_handout.py (ADR-0039 §7/A2; HO-07 workstream A item 6).
+# Full transitive freeze — reproducible, not "latest at the time someone rebuilt a venv".
+# Rebuild (macOS or Linux):  _templates/handout-assets/rebuild-render-env.sh   [--force]
+#   (or by hand: python3 -m venv .venv-render && .venv-render/bin/pip install -r this-file)
+# Verify:    .venv-render/bin/python -c "import markdown, weasyprint, fontTools, pypdf"
+# Host also needs (outside pip), for weasyprint + build-QA's pdftotext/pdftoppm:
+#   macOS (brew):     brew install pango cairo gdk-pixbuf glib poppler
+#   Debian/Ubuntu:    sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libcairo2 \
+#                       libgdk-pixbuf-2.0-0 libffi-dev libglib2.0-0 poppler-utils
+# Captured 2026-07-17 on Darwin / Python 3.14.6 — the freeze reproduces the same versions on Linux
+# (only compiled wheels differ). Bump deliberately, re-run selftest (its renderer cases) after.
+brotli==1.2.0
+cffi==2.1.0
+cssselect2==0.9.0
+fonttools==4.63.0
+Markdown==3.10.2
+pillow==12.3.0
+pycparser==3.0
+pydyf==0.12.1
+pypdf==6.14.2
+pyphen==0.17.2
+tinycss2==1.5.1
+tinyhtml5==2.1.0
+weasyprint==69.0
+webencodings==0.5.1
+zopfli==0.4.3

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Tabularium commit-msg guard — the emergency-override audit (ADR-0022 point 2). pre-commit lets
+# TABULARIUM_SKIP_GUARD=1 bypass the records lint; this hook then REQUIRES the commit message to name
+# the override, so a guard bypass can never be silent — it is recorded in history. (pre-commit runs
+# before the message exists, so this half must live here — git's hook order.)
+#
+# Install into the LOCAL working repo (same pattern as pre-push):
+#   cp checks/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+#   (or: checks/install-instance.sh dev, which installs all four)
+#
+# Portable: POSIX sh / bash 3.2 / BSD (lint-enforced; ADR-0020 / ADR-0021). Bite-tested in selftest.sh.
+set -u
+
+msg_file="$1"
+
+if [ "${TABULARIUM_SKIP_GUARD:-}" = "1" ]; then
+  if ! grep -q 'TABULARIUM_SKIP_GUARD' "$msg_file"; then
+    echo "commit-msg BLOCKED: TABULARIUM_SKIP_GUARD=1 was set, but the commit message does not name it." >&2
+    echo "  An emergency guard bypass must be recorded — put 'TABULARIUM_SKIP_GUARD' (with the reason) in the message." >&2
+    exit 1
+  fi
+fi
+exit 0
